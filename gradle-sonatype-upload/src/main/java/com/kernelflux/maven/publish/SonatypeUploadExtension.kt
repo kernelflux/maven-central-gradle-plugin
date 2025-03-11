@@ -6,6 +6,18 @@ import org.gradle.api.provider.Property
 import org.gradle.api.publish.maven.MavenPom
 import javax.inject.Inject
 
+
+/**
+ * `SonatypeUploadExtension` is a extension config class of SonatypeUploadPlugin.
+ *
+ * ## config:
+ * - uploadBundleName: sonatype bundle name of uploading.
+ * - username: sonatype auth user name
+ * - password: sonatype auth user password
+ * - signingKeyFile: gpg signing key file path
+ * - signingPass: gpg signing password
+ */
+
 open class SonatypeUploadExtension @Inject constructor(objects: ObjectFactory) {
     val uploadBundleName: Property<String> =
         objects.property(String::class.java).convention("sonatype-upload-bundle")

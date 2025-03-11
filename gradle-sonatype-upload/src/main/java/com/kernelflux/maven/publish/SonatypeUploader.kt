@@ -8,6 +8,9 @@ import java.net.URI
 import java.util.Base64
 import java.util.UUID
 
+/**
+ * Helper class: calling sonatype api to upload file.
+ */
 object SonatypeUploader {
     private const val REPO_REQUEST_HOST = "https://central.sonatype.com"
 

@@ -16,6 +16,23 @@ import java.security.MessageDigest
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
+
+/**
+ * `SonatypeUploadPlugin` is a Gradle plugin for simplifying the publishing process
+ * of Kotlin/Java/Android libraries to Sonatype Maven Central.
+ *
+ * ## Features:
+ * - Auto-configures `maven-publish` and `signing`
+ * - Compatible with AGP 8.x
+ * - One-click publishing to Sonatype
+ *
+ * ## Usage:
+ * ```kotlin
+ * plugins {
+ *     id("com.kernelflux.maven.publish") version "0.0.1"
+ * }
+ * ```
+ */
 class SonatypeUploadPlugin : Plugin<Project> {
 
     override fun apply(project: Project) {
@@ -93,7 +110,7 @@ class SonatypeUploadPlugin : Plugin<Project> {
             description = "Uploads artifacts to Sonatype Central Repository."
             dependsOn("publishReleasePublicationToMavenLocal")
             doLast {
-                uploadToSonatype(project, extensionInput, isPlugin)
+                uploadToSonatype(project, extensionInput)
             }
         }
     }
@@ -116,8 +133,7 @@ class SonatypeUploadPlugin : Plugin<Project> {
      */
     private fun uploadToSonatype(
         project: Project,
-        extension: SonatypeUploadExtension,
-        isPlugin: Boolean
+        extension: SonatypeUploadExtension
     ) {
         val usernameValue = extension.username.orNull
         val passwordValue = extension.password.orNull
