@@ -1,10 +1,15 @@
 package com.kernelflux.maven.publish
 
+import com.android.build.gradle.LibraryExtension
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.MavenPublication
+import org.gradle.api.tasks.SourceSetContainer
+import org.gradle.api.tasks.bundling.Jar
+import org.gradle.api.tasks.javadoc.Javadoc
 import org.gradle.kotlin.dsl.get
+import org.gradle.kotlin.dsl.the
 import org.gradle.plugins.signing.SigningExtension
 import java.io.BufferedOutputStream
 import java.io.File
@@ -112,6 +117,40 @@ class SonatypeUploadPlugin : Plugin<Project> {
             doLast {
                 uploadToSonatype(project, extensionInput)
             }
+        }
+
+        project.tasks.findByName("sourcesJar") ?: project.tasks.register(
+            "sourcesJar",
+            Jar::class.java
+        ) {
+            if (isKotlin || isJava || isPlugin) {
+                from(project.the(SourceSetContainer::class)["main"].allSource)
+            } else if (isAndroid) {
+                from(
+                    project.extensions.findByType(LibraryExtension::class.java)?.sourceSets?.getByName(
+                        "main"
+                    )?.java?.srcDirs
+                )
+            }
+            archiveClassifier.set("sources")
+        }
+
+
+        project.tasks.findByName("javadocJar") ?: project.tasks.register(
+            "javadocJar",
+            Jar::class.java
+        ) {
+            if (isKotlin || isJava || isPlugin) {
+                dependsOn(project.tasks.getByName("javadoc"))
+                from(
+                    project.tasks.withType(Javadoc::class.java).getByName("javadoc").destinationDir
+                )
+            } else if (isAndroid) {
+                val generateJavadocTask = project.tasks.named("generateReleaseJavadoc")
+                dependsOn(generateJavadocTask)
+                from(generateJavadocTask.get().outputs.files())
+            }
+            archiveClassifier.set("javadoc")
         }
     }
 

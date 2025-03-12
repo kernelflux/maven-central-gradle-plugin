@@ -8,7 +8,7 @@ plugins {
 }
 
 group = "com.kernelflux.maven.publish"
-version = "0.0.1"
+version = "0.0.2"
 
 gradlePlugin {
     website = "https://github.com/kernelflux/gradle-sonatype-upload"
