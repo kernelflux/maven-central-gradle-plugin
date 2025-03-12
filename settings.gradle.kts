@@ -21,8 +21,7 @@ dependencyResolutionManagement {
         gradlePluginPortal()
     }
 }
-
 rootProject.name = "gradle-sonatype-upload"
-include(":app")
 include(":gradle-sonatype-upload")
 includeBuild("build-logic")
+include(":module_sample")
