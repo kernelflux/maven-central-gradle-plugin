@@ -7,10 +7,10 @@ import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.bundling.Jar
-import org.gradle.api.tasks.javadoc.Javadoc
 import org.gradle.kotlin.dsl.get
 import org.gradle.kotlin.dsl.the
 import org.gradle.plugins.signing.SigningExtension
+import org.jetbrains.dokka.gradle.DokkaTaskPartial
 import java.io.BufferedOutputStream
 import java.io.File
 import java.io.FileOutputStream
@@ -45,12 +45,6 @@ class SonatypeUploadPlugin : Plugin<Project> {
         if (isApplication) {
             error("⚠️ Application Module (${project.name}) Publishing to Maven is not supported, configuration skipped.")
         }
-
-        // 1. config maven-publish plugin
-        if (!project.pluginManager.hasPlugin("maven-publish")) {
-            project.pluginManager.apply("maven-publish")
-        }
-
         val isAndroid = project.plugins.hasPlugin("com.android.library")
         val isKotlin =
             project.plugins.hasPlugin("kotlin") || project.plugins.hasPlugin("org.jetbrains.kotlin.jvm")
@@ -58,16 +52,29 @@ class SonatypeUploadPlugin : Plugin<Project> {
         val isPlugin =
             project.plugins.hasPlugin("java-gradle-plugin") || project.plugins.hasPlugin("kotlin-dsl")
 
+        if (!isAndroid && !isKotlin && !isJava && !isPlugin) {
+            error("⚠️ Only support Android/Kotlin/Java/Plugin Modules, configuration skipped.")
+        }
+
+        // 1. config maven-publish plugin
+        if (!project.pluginManager.hasPlugin("maven-publish")) {
+            project.pluginManager.apply("maven-publish")
+        }
         // 2. config signing plugin
         if (!project.pluginManager.hasPlugin("signing")) {
             project.pluginManager.apply("signing")
         }
 
-        // 3. create plugin extension
+        // 3. config Dokka plugin
+        if (!project.pluginManager.hasPlugin("org.jetbrains.dokka")) {
+            project.pluginManager.apply("org.jetbrains.dokka")
+        }
+
+        // 4. create plugin extension
         val extensionInput =
             project.extensions.create("sonatypeUpload", SonatypeUploadExtension::class.java)
 
-        // 4. config maven-publish
+        // 5. config maven-publish
         project.afterEvaluate {
             project.extensions.configure(PublishingExtension::class.java) {
                 publications {
@@ -77,12 +84,10 @@ class SonatypeUploadPlugin : Plugin<Project> {
                         artifactId = extensionInput.artifactId.get()
                         if (isAndroid) {
                             from(components["release"])
-                        } else if (isPlugin || isKotlin || isJava) {
+                        } else {
                             from(components["java"])
                         }
-                        artifact(tasks["sourcesJar"])
                         artifact(tasks["javadocJar"])
-
                         extensionInput.pom.orNull?.let {
                             pom(it)
                         }
@@ -106,52 +111,62 @@ class SonatypeUploadPlugin : Plugin<Project> {
                 sign(project.extensions.getByType(PublishingExtension::class.java).publications)
             }
 
+            // ensure generateMetadataFileForReleasePublication task is executed after sourcesJar task
+            project.tasks.named("generateMetadataFileForReleasePublication") {
+                println("generateMetadataFileForReleasePublication...")
+
+                if (project.tasks.findByName("sourcesJar") != null) {
+                    dependsOn(tasks["sourcesJar"])
+                }
+                if (project.tasks.findByName("javadocJar") != null) {
+                    dependsOn(tasks["javadocJar"])
+                }
+            }
         }
 
 
-        // 5. register tasks for uploading to Sonatype, documentation, and source tasks
+        // 6. register tasks for uploading to Sonatype, documentation, and source tasks
         project.tasks.register("deployToSonatype") {
             group = "Publishing"
             description = "Uploads artifacts to Sonatype Central Repository."
-            dependsOn("publishReleasePublicationToMavenLocal")
+            dependsOn( "publishReleasePublicationToMavenLocal")
             doLast {
                 uploadToSonatype(project, extensionInput)
             }
         }
 
-        project.tasks.findByName("sourcesJar") ?: project.tasks.register(
-            "sourcesJar",
-            Jar::class.java
-        ) {
-            if (isKotlin || isJava || isPlugin) {
-                from(project.the(SourceSetContainer::class)["main"].allSource)
-            } else if (isAndroid) {
-                from(
-                    project.extensions.findByType(LibraryExtension::class.java)?.sourceSets?.getByName(
-                        "main"
-                    )?.java?.srcDirs
-                )
+        // register Sources JAR task
+        if (project.tasks.findByName("sourcesJar") == null) {
+            project.tasks.register("sourcesJar", Jar::class.java) {
+                archiveClassifier.set("sources")
+                if (isAndroid) {
+                    val android = project.extensions.findByType(LibraryExtension::class.java)
+                        ?: throw IllegalStateException("Android Library Plugin not applied")
+                    from(android.sourceSets.findByName("main")?.java?.srcDirs)
+                } else {
+                    from(
+                        project.the(SourceSetContainer::class)
+                            .findByName("main")?.allSource?.srcDirs
+                    )
+                }
             }
-            archiveClassifier.set("sources")
         }
 
-
-        project.tasks.findByName("javadocJar") ?: project.tasks.register(
-            "javadocJar",
-            Jar::class.java
+        // 配置 dokkaJavadoc 任务
+        val dokkaJavadoc = project.tasks.findByName("dokkaJavadoc") ?: project.tasks.register(
+            "dokkaJavadoc",
+            DokkaTaskPartial::class.java
         ) {
-            if (isKotlin || isJava || isPlugin) {
-                dependsOn(project.tasks.getByName("javadoc"))
-                from(
-                    project.tasks.withType(Javadoc::class.java).getByName("javadoc").destinationDir
-                )
-            } else if (isAndroid) {
-                val generateJavadocTask = project.tasks.named("generateReleaseJavadoc")
-                dependsOn(generateJavadocTask)
-                from(generateJavadocTask.get().outputs.files())
-            }
+            outputDirectory.set(project.layout.buildDirectory.dir("dokkaJavadoc"))
+        }
+
+        // 注册生成 Javadoc JAR 的任务
+        project.tasks.register("javadocJar", Jar::class.java) {
             archiveClassifier.set("javadoc")
+            from(dokkaJavadoc)
+            dependsOn(dokkaJavadoc)
         }
+
     }
 
 

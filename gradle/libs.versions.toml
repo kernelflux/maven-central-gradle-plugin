@@ -1,9 +1,11 @@
 [versions]
 agp = "8.9.0"
 #noinspection GradleDependency
-kotlin = "2.0.21"
+dokkaGradlePlugin = "1.9.10"
+#noinspection GradleDependency
+kotlin = "2.0.20"
 
-sonatypeuploader = "0.0.2"
+sonatypeuploader = "0.0.39"
 
 coreKtx = "1.15.0"
 junit = "4.13.2"
@@ -20,6 +22,7 @@ okhttp = "4.11.0"
 
 
 [libraries]
+dokka-gradle-plugin = { module = "org.jetbrains.dokka:dokka-gradle-plugin", version.ref = "dokkaGradlePlugin" }
 kotlin-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
 
 

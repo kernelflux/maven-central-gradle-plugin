@@ -1,15 +1,33 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
 plugins {
     alias(libs.plugins.kotlin)
     alias(libs.plugins.plugin.publish)
-    id("common")
+    id("java-library")
+    id("kotlin")
     id("java-gradle-plugin")
     `kotlin-dsl`
-    //alias(libs.plugins.sonatype.uploader)
 }
 
-group = "com.kernelflux.maven.publish"
-version = "0.0.2"
+java {
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
+}
 
+
+tasks.withType(KotlinCompile::class.java) {
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_11)
+    }
+}
+
+
+
+group = "com.kernelflux.maven.publish"
+version = "0.0.39"
+
+@Suppress("UnstableApiUsage")
 gradlePlugin {
     website = "https://github.com/kernelflux/gradle-sonatype-upload"
     vcsUrl = "https://github.com/kernelflux/gradle-sonatype-upload"
@@ -27,5 +45,5 @@ gradlePlugin {
 dependencies {
     implementation(libs.agp.core)
     implementation(libs.agp.api)
-
+    implementation(libs.dokka.gradle.plugin)
 }
