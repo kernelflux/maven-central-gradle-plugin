@@ -8,7 +8,7 @@ import javax.inject.Inject
 
 
 /**
- * `SonatypeUploadExtension` is a extension config class of SonatypeUploadPlugin.
+ * `MavenCentralUploadExtension` is a extension config class of MavenCentralPlugin.
  *
  * ## config:
  * - uploadBundleName: sonatype bundle name of uploading.
@@ -18,9 +18,9 @@ import javax.inject.Inject
  * - signingPass: gpg signing password
  */
 
-open class SonatypeUploadExtension @Inject constructor(objects: ObjectFactory) {
+open class MavenCentralUploadExtension @Inject constructor(objects: ObjectFactory) {
     val uploadBundleName: Property<String> =
-        objects.property(String::class.java).convention("sonatype-upload-bundle")
+        objects.property(String::class.java).convention("maven-central-upload-bundle")
 
     val username: Property<String> = objects.property(String::class.java).convention("")
     val password: Property<String> = objects.property(String::class.java).convention("")

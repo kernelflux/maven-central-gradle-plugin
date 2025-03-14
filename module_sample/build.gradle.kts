@@ -1,7 +1,7 @@
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
-    alias(libs.plugins.sonatype.uploader)
+    alias(libs.plugins.maven.central.uploader)
 }
 
 val sGroupId = "com.kernelflux.sdk"
@@ -49,8 +49,7 @@ dependencies {
 
 }
 
-
-sonatypeUpload {
+mavenCentralUpload{
     uploadBundleName = "export_sample_bundle_v${sVersion}"
     username = findProperty("sonatypeUsername") as? String
     password = findProperty("sonatypePassword") as? String

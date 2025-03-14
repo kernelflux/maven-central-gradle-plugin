@@ -23,13 +23,13 @@ import java.util.zip.ZipOutputStream
 
 
 /**
- * `SonatypeUploadPlugin` is a Gradle plugin for simplifying the publishing process
- * of Kotlin/Java/Android libraries to Sonatype Maven Central.
+ * `MavenCentralPlugin` is a Gradle plugin for simplifying the publishing process
+ * of Kotlin/Java/Android libraries to Maven Central.
  *
  * ## Features:
  * - Auto-configures `maven-publish` and `signing`
  * - Compatible with AGP 8.x
- * - One-click publishing to Sonatype
+ * - One-click publishing to Maven Central
  *
  * ## Usage:
  * ```kotlin
@@ -38,7 +38,7 @@ import java.util.zip.ZipOutputStream
  * }
  * ```
  */
-class SonatypeUploadPlugin : Plugin<Project> {
+class MavenCentralPlugin : Plugin<Project> {
 
     override fun apply(project: Project) {
         val isApplication = project.plugins.hasPlugin("com.android.application")
@@ -72,7 +72,7 @@ class SonatypeUploadPlugin : Plugin<Project> {
 
         // 4. create plugin extension
         val extensionInput =
-            project.extensions.create("sonatypeUpload", SonatypeUploadExtension::class.java)
+            project.extensions.create("mavenCentralUpload", MavenCentralUploadExtension::class.java)
 
         // 5. config maven-publish
         project.afterEvaluate {
@@ -125,13 +125,13 @@ class SonatypeUploadPlugin : Plugin<Project> {
         }
 
 
-        // 6. register tasks for uploading to Sonatype, documentation, and source tasks
-        project.tasks.register("deployToSonatype") {
+        // 6. register tasks for uploading to Maven Central, documentation, and source tasks
+        project.tasks.register("deployToMavenCentral") {
             group = "Publishing"
-            description = "Uploads artifacts to Sonatype Central Repository."
-            dependsOn( "publishReleasePublicationToMavenLocal")
+            description = "Uploads artifacts to Maven Central Repository."
+            dependsOn("publishReleasePublicationToMavenLocal")
             doLast {
-                uploadToSonatype(project, extensionInput)
+                uploadToMavenCentral(project, extensionInput)
             }
         }
 
@@ -183,11 +183,11 @@ class SonatypeUploadPlugin : Plugin<Project> {
     }
 
     /**
-     * upload to Sonatype
+     * upload to Maven Central
      */
-    private fun uploadToSonatype(
+    private fun uploadToMavenCentral(
         project: Project,
-        extension: SonatypeUploadExtension
+        extension: MavenCentralUploadExtension
     ) {
         val usernameValue = extension.username.orNull
         val passwordValue = extension.password.orNull
@@ -204,7 +204,7 @@ class SonatypeUploadPlugin : Plugin<Project> {
             artifactId.isNullOrEmpty() ||
             version.isNullOrEmpty()
         ) {
-            error("sonatypeUpload is not configured...")
+            error("mavenCentralUpload is not configured...")
         }
 
         val localRepo = File(System.getProperty("user.home"), ".m2/repository")
@@ -223,7 +223,7 @@ class SonatypeUploadPlugin : Plugin<Project> {
             }
         }
 
-        val tempDir = Files.createTempDirectory("sonatype").toFile()
+        val tempDir = Files.createTempDirectory("mavenCentral").toFile()
         artifactFile.walkTopDown().forEach { file ->
             val relativeFilePath = file.relativeTo(localRepo).path
             println("tempDir : $relativeFilePath")
@@ -243,7 +243,7 @@ class SonatypeUploadPlugin : Plugin<Project> {
         )
         createZipBundle(tempDir, zipFile)
 
-        SonatypeUploader.uploadArtifact(
+        MavenCentralUploader.uploadArtifact(
             zipFile,
             usernameValue,
             passwordValue

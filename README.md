@@ -1,15 +1,15 @@
-# Sonatype Plugin for Gradle
+# Maven Central Plugin for Gradle
 
-gradle-sonatype-upload is a custom Android Gradle plugin aimed at simplifying the process of uploading Kotlin/Java/Plugin libraries to Sonatype Maven Central. It automatically configures the maven-publish and signing plugins and is compatible with AGP 8.x.
+maven-central-gradle-plugin is a custom Android Gradle plugin aimed at simplifying the process of uploading Kotlin/Java/Plugin libraries to Maven Central. It automatically configures the maven-publish and signing plugins and is compatible with AGP 8.x.
 
 ## Latest Version
 
-The latest version is ``0.0.39``. It requires at least __Gradle 8.11.1 and __Java 11__.
+The latest version is ``1.0.0``. It requires at least __Gradle 8.11.1 and __Java 11__.
 To use it with Groovy DSL:
 
 ```gradle
 plugins {
-  id "com.kernelflux.maven.publish" version "0.0.39"
+  id "com.kernelflux.maven.publish" version "1.0.0"
 }
 ```
 
@@ -17,25 +17,25 @@ To use it with KTS :
 
 ```toml
 [versions]
-sonatypeuploader = "0.0.39"
+mavencentraluploader = "1.0.0"
 
 [plugins]
-sonatype-uploader = { id = "com.kernelflux.maven.publish", version.ref = "sonatypeuploader" }
+maven-central-uploader = { id = "com.kernelflux.maven.publish", version.ref = "mavencentraluploader" }
 ```
 
 ```kts
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
 plugins {
-    alias(libs.plugins.sonatype.uploader) apply false
+    alias(libs.plugins.maven.central.uploader) apply false
 }
 ```
 
 ```kts
 plugins {
-    alias(libs.plugins.sonatype.uploader)
+    alias(libs.plugins.maven.central.uploader)
 }
 
-sonatypeUpload {
+mavenCentralUpload {
     uploadBundleName = "export_sample_bundle_v${sVersion}"
     username = findProperty("sonatypeUsername") as? String
     password = findProperty("sonatypePassword") as? String

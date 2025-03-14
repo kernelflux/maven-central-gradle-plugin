@@ -25,18 +25,18 @@ tasks.withType(KotlinCompile::class.java) {
 
 
 group = "com.kernelflux.maven.publish"
-version = "0.0.39"
+version = "1.0.0"
 
 @Suppress("UnstableApiUsage")
 gradlePlugin {
-    website = "https://github.com/kernelflux/gradle-sonatype-upload"
-    vcsUrl = "https://github.com/kernelflux/gradle-sonatype-upload"
+    website = "https://github.com/kernelflux/maven-central-gradle-plugin"
+    vcsUrl = "https://github.com/kernelflux/maven-central-gradle-plugin"
     plugins {
         create("mavenRepositoryPlugin") {
             id = group.toString()
-            implementationClass = "com.kernelflux.maven.publish.SonatypeUploadPlugin"
+            implementationClass = "com.kernelflux.maven.publish.MavenCentralPlugin"
             displayName = "Gradle Maven Publish Plugin"
-            description = "Publish your artifacts(jar/aar/plugin) to sonatype's central portal."
+            description = "Publish your artifacts(jar/aar/plugin) to maven central portal."
             tags = listOf("Release Plugin", "MavenCentral", "Sonatype")
         }
     }

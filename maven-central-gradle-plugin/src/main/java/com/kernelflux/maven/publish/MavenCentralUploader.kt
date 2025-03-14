@@ -11,7 +11,7 @@ import java.util.UUID
 /**
  * Helper class: calling sonatype api to upload file.
  */
-object SonatypeUploader {
+object MavenCentralUploader {
     private const val REPO_REQUEST_HOST = "https://central.sonatype.com"
 
     private const val REPO_UPLOAD_URL = "/api/v1/publisher/upload"

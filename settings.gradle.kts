@@ -21,6 +21,6 @@ dependencyResolutionManagement {
         gradlePluginPortal()
     }
 }
-rootProject.name = "gradle-sonatype-upload"
-include(":gradle-sonatype-upload")
+rootProject.name = "maven-central-gradle-plugin"
+include(":maven-central-gradle-plugin")
 include(":module_sample")
