@@ -51,7 +51,7 @@ dependencies {
 
 
 sonatypeUpload {
-    uploadBundleName = "export_kv_bundle_v${sVersion}"
+    uploadBundleName = "export_sample_bundle_v${sVersion}"
     username = findProperty("sonatypeUsername") as? String
     password = findProperty("sonatypePassword") as? String
 

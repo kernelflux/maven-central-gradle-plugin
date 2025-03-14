@@ -4,7 +4,7 @@ gradle-sonatype-upload is a custom Android Gradle plugin aimed at simplifying th
 
 ## Latest Version
 
-The latest version is ``0.0.1``. It requires at least __Gradle 8.11.1 and __Java 11__.
+The latest version is ``0.0.39``. It requires at least __Gradle 8.11.1 and __Java 11__.
 To use it with Groovy DSL:
 
 ```gradle
@@ -36,7 +36,7 @@ plugins {
 }
 
 sonatypeUpload {
-    uploadBundleName = "export_kv_bundle_v${sVersion}"
+    uploadBundleName = "export_sample_bundle_v${sVersion}"
     username = findProperty("sonatypeUsername") as? String
     password = findProperty("sonatypePassword") as? String
 
