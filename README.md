@@ -73,11 +73,7 @@ sonatypeUpload {
 }
 ```
 
-
-
 # License
-
-[]([gradle-sonatype-upload/LICENSE at master · kernelflux/gradle-sonatype-upload · GitHub](https://github.com/kernelflux/gradle-sonatype-upload/blob/master/LICENSE))
 
 Copyright (C) 2025 kernelflux - 0kt12
 
