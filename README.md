@@ -4,33 +4,33 @@ gradle-sonatype-upload is a custom Android Gradle plugin aimed at simplifying th
 
 ## Latest Version
 
-The latest version is ``0.0.1``. It requires at least __Gradle 8.11 and __Java 11__.
+The latest version is ``0.0.1``. It requires at least __Gradle 8.11.1 and __Java 11__.
 To use it with Groovy DSL:
 
 ```gradle
 plugins {
-  id "com.kernelflux.maven.publish" version "0.0.1"
+  id "com.kernelflux.maven.publish" version "0.0.39"
 }
 ```
 
 To use it with KTS :
 
-```
+```toml
 [versions]
-sonatypeuploader = "0.0.1"
+sonatypeuploader = "0.0.39"
 
 [plugins]
 sonatype-uploader = { id = "com.kernelflux.maven.publish", version.ref = "sonatypeuploader" }
 ```
 
-```
+```kts
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
 plugins {
     alias(libs.plugins.sonatype.uploader) apply false
 }
 ```
 
-```
+```kts
 plugins {
     alias(libs.plugins.sonatype.uploader)
 }
