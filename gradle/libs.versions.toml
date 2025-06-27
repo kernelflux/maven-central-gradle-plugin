@@ -3,7 +3,7 @@ agp = "8.10.1"
 #noinspection GradleDependency
 dokkaGradlePlugin = "2.0.0"
 #noinspection GradleDependency
-kotlin = "2.2.0"
+kotlin = "2.0.20"
 
 coreKtx = "1.15.0"
 appcompat = "1.7.0"
