@@ -2,12 +2,9 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    alias(libs.plugins.kotlin)
-    alias(libs.plugins.plugin.publish)
-    id("java-library")
-    id("kotlin")
-    id("java-gradle-plugin")
     `kotlin-dsl`
+    id("java-library") // ✅ 需要对外暴露 API
+    alias(libs.plugins.plugin.publish)
 }
 
 java {
@@ -25,7 +22,7 @@ tasks.withType(KotlinCompile::class.java) {
 
 
 group = "com.kernelflux.maven.publish"
-version = "1.0.0"
+version = "1.0.1"
 
 @Suppress("UnstableApiUsage")
 gradlePlugin {

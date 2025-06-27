@@ -34,7 +34,7 @@ import java.util.zip.ZipOutputStream
  * ## Usage:
  * ```kotlin
  * plugins {
- *     id("com.kernelflux.maven.publish") version "0.0.1"
+ *     id("com.kernelflux.maven.publish") version "1.0.1"
  * }
  * ```
  */
@@ -152,7 +152,7 @@ class MavenCentralPlugin : Plugin<Project> {
             }
         }
 
-        // 配置 dokkaJavadoc 任务
+        // register dokkaJavadoc task
         val dokkaJavadoc = project.tasks.findByName("dokkaJavadoc") ?: project.tasks.register(
             "dokkaJavadoc",
             DokkaTaskPartial::class.java
@@ -160,7 +160,7 @@ class MavenCentralPlugin : Plugin<Project> {
             outputDirectory.set(project.layout.buildDirectory.dir("dokkaJavadoc"))
         }
 
-        // 注册生成 Javadoc JAR 的任务
+        // register Javadoc JAR task
         project.tasks.register("javadocJar", Jar::class.java) {
             archiveClassifier.set("javadoc")
             from(dokkaJavadoc)
@@ -187,7 +187,7 @@ class MavenCentralPlugin : Plugin<Project> {
      */
     private fun uploadToMavenCentral(
         project: Project,
-        extension: MavenCentralUploadExtension
+        extension: MavenCentralUploadExtension,
     ) {
         val usernameValue = extension.username.orNull
         val passwordValue = extension.password.orNull
