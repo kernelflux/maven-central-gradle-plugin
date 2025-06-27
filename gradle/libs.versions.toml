@@ -16,7 +16,6 @@ androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = 
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 
 agp-core = { group = "com.android.tools.build", name = "gradle", version.ref = "agp" }
-agp-api = { group = "com.android.tools.build", name = "gradle-api", version.ref = "agp" }
 
 
 [plugins]

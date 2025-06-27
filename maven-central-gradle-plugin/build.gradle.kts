@@ -22,7 +22,7 @@ tasks.withType(KotlinCompile::class.java) {
 
 
 group = "com.kernelflux.maven.publish"
-version = "1.0.1"
+version = "1.0.2"
 
 @Suppress("UnstableApiUsage")
 gradlePlugin {
@@ -40,7 +40,7 @@ gradlePlugin {
 }
 
 dependencies {
-    implementation(libs.agp.core)
-    implementation(libs.agp.api)
+    compileOnly(libs.agp.core)
+    implementation(gradleApi())
     implementation(libs.dokka.gradle.plugin)
 }
