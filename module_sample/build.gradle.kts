@@ -9,7 +9,7 @@ plugins {
 
 val sGroupId = "com.kernelflux.sdk"
 val sArtifactId = "sample"
-val sVersion = "1.0.1"
+val sVersion = "1.0.2"
 
 
 android {

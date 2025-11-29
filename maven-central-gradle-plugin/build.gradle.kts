@@ -22,7 +22,7 @@ tasks.withType(KotlinCompile::class.java) {
 
 
 group = "com.kernelflux.maven.publish"
-version = "1.0.4"
+version = "1.0.6"
 
 
 gradlePlugin {

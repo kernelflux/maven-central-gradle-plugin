@@ -10,7 +10,7 @@ import org.gradle.api.tasks.bundling.Jar
 import org.gradle.kotlin.dsl.get
 import org.gradle.kotlin.dsl.the
 import org.gradle.plugins.signing.SigningExtension
-import org.jetbrains.dokka.gradle.DokkaTaskPartial
+import org.jetbrains.dokka.gradle.DokkaTask
 import java.io.BufferedOutputStream
 import java.io.File
 import java.io.FileOutputStream
@@ -41,6 +41,15 @@ import java.util.zip.ZipOutputStream
 class MavenCentralPlugin : Plugin<Project> {
 
     override fun apply(project: Project) {
+        // Enable Dokka V2 mode early to avoid deprecation warnings
+        // This must be set before the Dokka plugin is applied
+        // Set as system property which Gradle will pick up
+        val dokkaPluginMode = "org.jetbrains.dokka.experimental.gradle.pluginMode"
+        if (System.getProperty(dokkaPluginMode) == null && 
+            project.findProperty(dokkaPluginMode) == null) {
+            System.setProperty(dokkaPluginMode, "V2EnabledWithHelpers")
+        }
+        
         val isApplication = project.plugins.hasPlugin("com.android.application")
         if (isApplication) {
             error("⚠️ Application Module (${project.name}) Publishing to Maven is not supported, configuration skipped.")
@@ -56,40 +65,59 @@ class MavenCentralPlugin : Plugin<Project> {
             error("⚠️ Only support Android/Kotlin/Java/Plugin Modules, configuration skipped.")
         }
 
-        // 1. config maven-publish plugin
+        // 1. Configure maven-publish plugin
         if (!project.pluginManager.hasPlugin("maven-publish")) {
             project.pluginManager.apply("maven-publish")
         }
-        // 2. config signing plugin
+        // 2. Configure signing plugin
         if (!project.pluginManager.hasPlugin("signing")) {
             project.pluginManager.apply("signing")
         }
 
-        // 3. config Dokka plugin
+        // 3. Configure Dokka plugin (V2)
         if (!project.pluginManager.hasPlugin("org.jetbrains.dokka")) {
             project.pluginManager.apply("org.jetbrains.dokka")
         }
 
-        // 4. create plugin extension
+        // 4. Create plugin extension
         val extensionInput =
             project.extensions.create("mavenCentralUpload", MavenCentralUploadExtension::class.java)
 
-        // 5. config maven-publish
+        // 5. Configure maven-publish
         project.afterEvaluate {
             project.extensions.configure(PublishingExtension::class.java) {
                 publications {
-                    create("release", MavenPublication::class.java) {
-                        groupId = extensionInput.groupId.get()
-                        version = extensionInput.version.get()
-                        artifactId = extensionInput.artifactId.get()
-                        if (isAndroid) {
-                            from(components["release"])
-                        } else {
-                            from(components["java"])
+                    // Check if release publication already exists, configure it if exists, otherwise create
+                    val existingPublication = findByName("release") as? MavenPublication
+                    if (existingPublication != null) {
+                        // If already exists (may be auto-created by singleVariant), configure it
+                        existingPublication.groupId = extensionInput.groupId.get()
+                        existingPublication.version = extensionInput.version.get()
+                        existingPublication.artifactId = extensionInput.artifactId.get()
+                        // Add javadocJar artifact if not already added
+                        try {
+                            existingPublication.artifact(tasks["javadocJar"])
+                        } catch (e: Exception) {
+                            // Ignore exception if already added
                         }
-                        artifact(tasks["javadocJar"])
                         extensionInput.pom.orNull?.let {
-                            pom(it)
+                            existingPublication.pom(it)
+                        }
+                    } else {
+                        // If not exists, create new publication
+                        create("release", MavenPublication::class.java) {
+                            groupId = extensionInput.groupId.get()
+                            version = extensionInput.version.get()
+                            artifactId = extensionInput.artifactId.get()
+                            if (isAndroid) {
+                                from(components["release"])
+                            } else {
+                                from(components["java"])
+                            }
+                            artifact(tasks["javadocJar"])
+                            extensionInput.pom.orNull?.let {
+                                pom(it)
+                            }
                         }
                     }
                 }
@@ -111,7 +139,7 @@ class MavenCentralPlugin : Plugin<Project> {
                 sign(project.extensions.getByType(PublishingExtension::class.java).publications)
             }
 
-            // ensure generateMetadataFileForReleasePublication task is executed after sourcesJar task
+            // Ensure generateMetadataFileForReleasePublication task is executed after sourcesJar task
             project.tasks.named("generateMetadataFileForReleasePublication") {
                 println("generateMetadataFileForReleasePublication...")
 
@@ -125,9 +153,9 @@ class MavenCentralPlugin : Plugin<Project> {
         }
 
 
-        // 6. register tasks for uploading to Maven Central, documentation, and source tasks
+        // 6. Register tasks for uploading to Maven Central, documentation, and source tasks
         project.tasks.register("deployToMavenCentral") {
-            group = "Publishing"
+            group = "Maven Central"
             description = "Uploads artifacts to Maven Central Repository."
             dependsOn("publishReleasePublicationToMavenLocal")
             doLast {
@@ -135,7 +163,7 @@ class MavenCentralPlugin : Plugin<Project> {
             }
         }
 
-        // register Sources JAR task
+        // Register Sources JAR task
         if (project.tasks.findByName("sourcesJar") == null) {
             project.tasks.register("sourcesJar", Jar::class.java) {
                 archiveClassifier.set("sources")
@@ -152,15 +180,15 @@ class MavenCentralPlugin : Plugin<Project> {
             }
         }
 
-        // register dokkaJavadoc task
+        // Register dokkaJavadoc task (Dokka V2)
         val dokkaJavadoc = project.tasks.findByName("dokkaJavadoc") ?: project.tasks.register(
             "dokkaJavadoc",
-            DokkaTaskPartial::class.java
+            DokkaTask::class.java
         ) {
             outputDirectory.set(project.layout.buildDirectory.dir("dokkaJavadoc"))
         }
 
-        // register Javadoc JAR task
+        // Register Javadoc JAR task
         project.tasks.register("javadocJar", Jar::class.java) {
             archiveClassifier.set("javadoc")
             from(dokkaJavadoc)
@@ -183,7 +211,7 @@ class MavenCentralPlugin : Plugin<Project> {
     }
 
     /**
-     * upload to Maven Central
+     * Upload to Maven Central
      */
     private fun uploadToMavenCentral(
         project: Project,
@@ -225,7 +253,7 @@ class MavenCentralPlugin : Plugin<Project> {
 
         val tempDir = Files.createTempDirectory("mavenCentral").toFile()
         artifactFile.walkTopDown().forEach { file ->
-            // 只复制必要的文件：artifacts、签名文件(.asc)、校验和文件(.md5, .sha1, .sha256)
+            // Only copy necessary files: artifacts, signature files (.asc), checksum files (.md5, .sha1, .sha256)
             val fileName = file.name
             val isArtifact = file.extension in listOf("jar", "pom", "aar", "module")
             val isSignature = fileName.endsWith(".asc")

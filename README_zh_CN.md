@@ -1,12 +1,12 @@
-# Maven Central Plugin for Gradle
+# Maven Central Gradle 插件
 
-A Gradle plugin that simplifies publishing Kotlin/Java/Android libraries to Maven Central. Automatically configures `maven-publish` and `signing` plugins. Compatible with AGP 8.x.
+一个简化将 Kotlin/Java/Android 库发布到 Maven Central 的 Gradle 插件。自动配置 `maven-publish` 和 `signing` 插件。兼容 AGP 8.x。
 
-## Latest Version
+## 最新版本
 
-**1.0.6** - Requires AGP 8.10.1+ and Java 11+
+**1.0.6** - 需要 AGP 8.10.1+ 和 Java 11+
 
-## Quick Start
+## 快速开始
 
 ### Groovy DSL
 
@@ -62,16 +62,17 @@ mavenCentralUpload {
 }
 ```
 
-## Usage
+## 使用方法
 
-1. Configure `mavenCentralUpload` block in your `build.gradle.kts`
-2. Run `./gradlew publishReleasePublicationToMavenLocal` to publish locally
-3. Run `./gradlew deployToMavenCentral` to upload to Maven Central
+1. 在 `build.gradle.kts` 中配置 `mavenCentralUpload` 块
+2. 运行 `./gradlew publishReleasePublicationToMavenLocal` 发布到本地
+3. 运行 `./gradlew deployToMavenCentral` 上传到 Maven Central
 
-The `deployToMavenCentral` task is available under the **Maven Central** task group in Gradle.
+`deployToMavenCentral` 任务位于 Gradle 的 **Maven Central** 任务组中。
 
-## License
+## 许可证
 
 Copyright (C) 2025 kernelflux - 0kt12
 
 Licensed under the Apache License, Version 2.0
+
