@@ -22,9 +22,9 @@ tasks.withType(KotlinCompile::class.java) {
 
 
 group = "com.kernelflux.maven.publish"
-version = "1.0.3"
+version = "1.0.4"
 
-@Suppress("UnstableApiUsage")
+
 gradlePlugin {
     website = "https://github.com/kernelflux/maven-central-gradle-plugin"
     vcsUrl = "https://github.com/kernelflux/maven-central-gradle-plugin"

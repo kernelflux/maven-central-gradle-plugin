@@ -225,15 +225,23 @@ class MavenCentralPlugin : Plugin<Project> {
 
         val tempDir = Files.createTempDirectory("mavenCentral").toFile()
         artifactFile.walkTopDown().forEach { file ->
-            val relativeFilePath = file.relativeTo(localRepo).path
-            println("tempDir : $relativeFilePath")
-            val targetFile = File(tempDir, relativeFilePath)
-            if (file.isDirectory) {
-                targetFile.mkdirs()
-            } else {
-                targetFile.parentFile?.mkdirs()
-                println("artifactFile copy: ${targetFile.absolutePath}")
-                Files.copy(file.toPath(), targetFile.toPath(), StandardCopyOption.REPLACE_EXISTING)
+            // 只复制必要的文件：artifacts、签名文件(.asc)、校验和文件(.md5, .sha1, .sha256)
+            val fileName = file.name
+            val isArtifact = file.extension in listOf("jar", "pom", "aar", "module")
+            val isSignature = fileName.endsWith(".asc")
+            val isChecksum = fileName.endsWith(".md5") || fileName.endsWith(".sha1") || fileName.endsWith(".sha256")
+            
+            if (file.isDirectory || isArtifact || isSignature || isChecksum) {
+                val relativeFilePath = file.relativeTo(localRepo).path
+                println("tempDir : $relativeFilePath")
+                val targetFile = File(tempDir, relativeFilePath)
+                if (file.isDirectory) {
+                    targetFile.mkdirs()
+                } else {
+                    targetFile.parentFile?.mkdirs()
+                    println("artifactFile copy: ${targetFile.absolutePath}")
+                    Files.copy(file.toPath(), targetFile.toPath(), StandardCopyOption.REPLACE_EXISTING)
+                }
             }
         }
 
