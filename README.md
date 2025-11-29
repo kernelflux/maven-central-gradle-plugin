@@ -4,12 +4,12 @@ maven-central-gradle-plugin is a custom Android Gradle plugin aimed at simplifyi
 
 ## Latest Version
 
-The latest version is ``1.0.1``. It requires at least agp 8.10.1 and Java 11.
+The latest version is ``1.0.4``. It requires at least agp 8.10.1 and Java 11.
 To use it with Groovy DSL:
 
 ```gradle
 plugins {
-  id "com.kernelflux.maven.publish" version "1.0.1"
+  id "com.kernelflux.maven.publish" version "1.0.4"
 }
 ```
 
@@ -17,7 +17,7 @@ To use it with KTS :
 
 ```toml
 [versions]
-mavencentraluploader = "1.0.1"
+mavencentraluploader = "1.0.4"
 
 [plugins]
 maven-central-uploader = { id = "com.kernelflux.maven.publish", version.ref = "mavencentraluploader" }
