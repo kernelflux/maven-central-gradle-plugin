@@ -1,6 +1,7 @@
 package com.kernelflux.maven.publish
 
 import com.android.build.gradle.LibraryExtension
+import org.gradle.api.Action
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.publish.PublishingExtension
@@ -10,7 +11,6 @@ import org.gradle.api.tasks.bundling.Jar
 import org.gradle.kotlin.dsl.get
 import org.gradle.kotlin.dsl.the
 import org.gradle.plugins.signing.SigningExtension
-import org.jetbrains.dokka.gradle.DokkaTask
 import java.io.BufferedOutputStream
 import java.io.File
 import java.io.FileOutputStream
@@ -45,11 +45,12 @@ class MavenCentralPlugin : Plugin<Project> {
         // This must be set before the Dokka plugin is applied
         // Set as system property which Gradle will pick up
         val dokkaPluginMode = "org.jetbrains.dokka.experimental.gradle.pluginMode"
-        if (System.getProperty(dokkaPluginMode) == null && 
-            project.findProperty(dokkaPluginMode) == null) {
+        if (System.getProperty(dokkaPluginMode) == null &&
+            project.findProperty(dokkaPluginMode) == null
+        ) {
             System.setProperty(dokkaPluginMode, "V2EnabledWithHelpers")
         }
-        
+
         val isApplication = project.plugins.hasPlugin("com.android.application")
         if (isApplication) {
             error("⚠️ Application Module (${project.name}) Publishing to Maven is not supported, configuration skipped.")
@@ -94,11 +95,24 @@ class MavenCentralPlugin : Plugin<Project> {
                         existingPublication.groupId = extensionInput.groupId.get()
                         existingPublication.version = extensionInput.version.get()
                         existingPublication.artifactId = extensionInput.artifactId.get()
-                        // Add javadocJar artifact if not already added
-                        try {
-                            existingPublication.artifact(tasks["javadocJar"])
-                        } catch (e: Exception) {
-                            // Ignore exception if already added
+                        // Add sourcesJar and javadocJar artifacts if not already added
+                        val hasSourcesJar =
+                            existingPublication.artifacts.any { it.classifier == "sources" }
+                        val hasJavadocJar =
+                            existingPublication.artifacts.any { it.classifier == "javadoc" }
+                        if (!hasSourcesJar && project.tasks.findByName("sourcesJar") != null) {
+                            try {
+                                existingPublication.artifact(tasks["sourcesJar"])
+                            } catch (e: Exception) {
+                                // Ignore exception if already added
+                            }
+                        }
+                        if (!hasJavadocJar && project.tasks.findByName("javadocJar") != null) {
+                            try {
+                                existingPublication.artifact(tasks["javadocJar"])
+                            } catch (e: Exception) {
+                                // Ignore exception if already added
+                            }
                         }
                         extensionInput.pom.orNull?.let {
                             existingPublication.pom(it)
@@ -114,7 +128,12 @@ class MavenCentralPlugin : Plugin<Project> {
                             } else {
                                 from(components["java"])
                             }
-                            artifact(tasks["javadocJar"])
+                            if (project.tasks.findByName("sourcesJar") != null) {
+                                artifact(tasks["sourcesJar"])
+                            }
+                            if (project.tasks.findByName("javadocJar") != null) {
+                                artifact(tasks["javadocJar"])
+                            }
                             extensionInput.pom.orNull?.let {
                                 pom(it)
                             }
@@ -180,19 +199,35 @@ class MavenCentralPlugin : Plugin<Project> {
             }
         }
 
-        // Register dokkaJavadoc task (Dokka V2)
-        val dokkaJavadoc = project.tasks.findByName("dokkaJavadoc") ?: project.tasks.register(
-            "dokkaJavadoc",
-            DokkaTask::class.java
-        ) {
-            outputDirectory.set(project.layout.buildDirectory.dir("dokkaJavadoc"))
+        // Disable Dokka V1 tasks if they exist (we're using V2 mode)
+        // With V2 mode enabled via system property, Dokka plugin will create V2 tasks automatically
+        project.afterEvaluate {
+            project.tasks.matching { it.name == "dokkaJavadoc" }.configureEach {
+                // Only disable if it's a V1 task (check by class name to avoid using deprecated API)
+                val taskClassName = javaClass.name
+                if (taskClassName.contains("AbstractDokkaLeafTask") ||
+                    taskClassName.contains("DokkaTask")
+                ) {
+                    enabled = false
+                }
+            }
         }
 
         // Register Javadoc JAR task
-        project.tasks.register("javadocJar", Jar::class.java) {
-            archiveClassifier.set("javadoc")
-            from(dokkaJavadoc)
-            dependsOn(dokkaJavadoc)
+        // In Dokka V2 mode, the Dokka plugin automatically creates the dokkaJavadoc task
+        // We reference it using tasks.named to avoid using deprecated V1 API (DokkaTask)
+        project.afterEvaluate {
+            project.tasks.register("javadocJar", Jar::class.java) {
+                archiveClassifier.set("javadoc")
+                try {
+                    val dokkaJavadocTask = project.tasks.named("dokkaJavadoc")
+                    from(dokkaJavadocTask)
+                    dependsOn(dokkaJavadocTask)
+                } catch (e: Exception) {
+                    // If dokkaJavadoc task doesn't exist, log a warning but don't fail
+                    project.logger.warn("dokkaJavadoc task not found, javadocJar will be created without Dokka output: ${e.message}")
+                }
+            }
         }
 
     }
@@ -257,8 +292,9 @@ class MavenCentralPlugin : Plugin<Project> {
             val fileName = file.name
             val isArtifact = file.extension in listOf("jar", "pom", "aar", "module")
             val isSignature = fileName.endsWith(".asc")
-            val isChecksum = fileName.endsWith(".md5") || fileName.endsWith(".sha1") || fileName.endsWith(".sha256")
-            
+            val isChecksum =
+                fileName.endsWith(".md5") || fileName.endsWith(".sha1") || fileName.endsWith(".sha256")
+
             if (file.isDirectory || isArtifact || isSignature || isChecksum) {
                 val relativeFilePath = file.relativeTo(localRepo).path
                 println("tempDir : $relativeFilePath")
@@ -268,7 +304,11 @@ class MavenCentralPlugin : Plugin<Project> {
                 } else {
                     targetFile.parentFile?.mkdirs()
                     println("artifactFile copy: ${targetFile.absolutePath}")
-                    Files.copy(file.toPath(), targetFile.toPath(), StandardCopyOption.REPLACE_EXISTING)
+                    Files.copy(
+                        file.toPath(),
+                        targetFile.toPath(),
+                        StandardCopyOption.REPLACE_EXISTING
+                    )
                 }
             }
         }

@@ -4,7 +4,7 @@
 
 ## 最新版本
 
-**1.0.6** - 需要 AGP 8.10.1+ 和 Java 11+
+**1.0.7** - 需要 AGP 8.10.1+ 和 Java 11+
 
 ## 快速开始
 
@@ -12,7 +12,7 @@
 
 ```gradle
 plugins {
-  id "com.kernelflux.maven.publish" version "1.0.6"
+  id "com.kernelflux.maven.publish" version "1.0.7"
 }
 ```
 
@@ -20,7 +20,7 @@ plugins {
 
 ```toml
 [versions]
-mavencentraluploader = "1.0.6"
+mavencentraluploader = "1.0.7"
 
 [plugins]
 maven-central-uploader = { id = "com.kernelflux.maven.publish", version.ref = "mavencentraluploader" }

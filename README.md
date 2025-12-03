@@ -4,7 +4,7 @@ A Gradle plugin that simplifies publishing Kotlin/Java/Android libraries to Mave
 
 ## Latest Version
 
-**1.0.6** - Requires AGP 8.10.1+ and Java 11+
+**1.0.7** - Requires AGP 8.10.1+ and Java 11+
 
 ## Quick Start
 
@@ -12,7 +12,7 @@ A Gradle plugin that simplifies publishing Kotlin/Java/Android libraries to Mave
 
 ```gradle
 plugins {
-  id "com.kernelflux.maven.publish" version "1.0.6"
+  id "com.kernelflux.maven.publish" version "1.0.7"
 }
 ```
 
@@ -20,7 +20,7 @@ plugins {
 
 ```toml
 [versions]
-mavencentraluploader = "1.0.6"
+mavencentraluploader = "1.0.7"
 
 [plugins]
 maven-central-uploader = { id = "com.kernelflux.maven.publish", version.ref = "mavencentraluploader" }
