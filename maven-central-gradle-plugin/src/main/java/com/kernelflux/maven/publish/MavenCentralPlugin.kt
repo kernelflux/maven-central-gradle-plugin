@@ -96,15 +96,27 @@ class MavenCentralPlugin : Plugin<Project> {
                         existingPublication.version = extensionInput.version.get()
                         existingPublication.artifactId = extensionInput.artifactId.get()
                         // Add sourcesJar and javadocJar artifacts if not already added
-                        val hasSourcesJar =
-                            existingPublication.artifacts.any { it.classifier == "sources" }
-                        val hasJavadocJar =
-                            existingPublication.artifacts.any { it.classifier == "javadoc" }
+                        // Check for sources artifact: classifier "sources" and extension "jar"
+                        // Note: singleVariant withSourcesJar() automatically adds sources jar to publication
+                        // We need to check both classifier and extension to avoid duplicates
+                        val hasSourcesJar = existingPublication.artifacts.any { artifact ->
+                            val classifier = artifact.classifier
+                            val extension = artifact.extension
+                            classifier == "sources" && extension == "jar"
+                        }
+                        val hasJavadocJar = existingPublication.artifacts.any { artifact ->
+                            val classifier = artifact.classifier
+                            val extension = artifact.extension
+                            classifier == "javadoc" && extension == "jar"
+                        }
+                        // Only add sourcesJar if publication doesn't already have a sources jar artifact
+                        // This prevents duplicate when singleVariant withSourcesJar() is used
                         if (!hasSourcesJar && project.tasks.findByName("sourcesJar") != null) {
                             try {
                                 existingPublication.artifact(tasks["sourcesJar"])
                             } catch (e: Exception) {
-                                // Ignore exception if already added
+                                // Ignore exception if already added or other error
+                                project.logger.debug("Failed to add sourcesJar to publication: ${e.message}")
                             }
                         }
                         if (!hasJavadocJar && project.tasks.findByName("javadocJar") != null) {
@@ -183,6 +195,9 @@ class MavenCentralPlugin : Plugin<Project> {
         }
 
         // Register Sources JAR task
+        // Note: For Android projects using singleVariant withSourcesJar(),
+        // the sources jar is automatically created and added to publication.
+        // We only create sourcesJar task if it doesn't exist and is needed.
         if (project.tasks.findByName("sourcesJar") == null) {
             project.tasks.register("sourcesJar", Jar::class.java) {
                 archiveClassifier.set("sources")
