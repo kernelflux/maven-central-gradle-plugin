@@ -79,6 +79,16 @@ class MavenCentralPlugin : Plugin<Project> {
         if (!project.pluginManager.hasPlugin("org.jetbrains.dokka")) {
             project.pluginManager.apply("org.jetbrains.dokka")
         }
+        // Apply dokka-javadoc plugin for Javadoc format output (required for Maven Central)
+        // This is needed to generate Javadoc format documentation
+        if (!project.pluginManager.hasPlugin("org.jetbrains.dokka-javadoc")) {
+            try {
+                project.pluginManager.apply("org.jetbrains.dokka-javadoc")
+            } catch (e: Exception) {
+                // Plugin may not be available in older Dokka versions, ignore
+                project.logger.debug("dokka-javadoc plugin not available: ${e.message}")
+            }
+        }
 
         // 4. Create plugin extension
         val extensionInput =
@@ -95,20 +105,59 @@ class MavenCentralPlugin : Plugin<Project> {
                         existingPublication.groupId = extensionInput.groupId.get()
                         existingPublication.version = extensionInput.version.get()
                         existingPublication.artifactId = extensionInput.artifactId.get()
-                        // Add sourcesJar and javadocJar artifacts if not already added
-                        // Check for sources artifact: classifier "sources" and extension "jar"
-                        // Note: singleVariant withSourcesJar() automatically adds sources jar to publication
+                        // Check if sourcesJar and javadocJar artifacts are already added
+                        // This happens when singleVariant("release") { withSourcesJar() } is configured
                         // We need to check both classifier and extension to avoid duplicates
+                        fun getArtifactProperty(property: Any?): String? {
+                            return when (property) {
+                                is String -> property
+                                is org.gradle.api.provider.Provider<*> -> {
+                                    try {
+                                        @Suppress("UNCHECKED_CAST")
+                                        (property as? org.gradle.api.provider.Provider<String>)?.getOrNull()
+                                            ?: property.getOrNull()?.toString()
+                                    } catch (e: Exception) {
+                                        null
+                                    }
+                                }
+                                else -> property?.toString()
+                            }
+                        }
+                        
+                        // Check if sources jar already exists
                         val hasSourcesJar = existingPublication.artifacts.any { artifact ->
-                            val classifier = artifact.classifier
-                            val extension = artifact.extension
-                            classifier == "sources" && extension == "jar"
+                            try {
+                                val classifier = getArtifactProperty(artifact.classifier)
+                                val extension = getArtifactProperty(artifact.extension)
+                                classifier == "sources" && extension == "jar"
+                            } catch (e: Exception) {
+                                // Fallback: check file name
+                                try {
+                                    val fileName = artifact.file?.name ?: ""
+                                    fileName.contains("sources") && fileName.endsWith(".jar")
+                                } catch (ex: Exception) {
+                                    false
+                                }
+                            }
                         }
+                        
+                        // Check if javadoc jar already exists
                         val hasJavadocJar = existingPublication.artifacts.any { artifact ->
-                            val classifier = artifact.classifier
-                            val extension = artifact.extension
-                            classifier == "javadoc" && extension == "jar"
+                            try {
+                                val classifier = getArtifactProperty(artifact.classifier)
+                                val extension = getArtifactProperty(artifact.extension)
+                                classifier == "javadoc" && extension == "jar"
+                            } catch (e: Exception) {
+                                // Fallback: check file name
+                                try {
+                                    val fileName = artifact.file?.name ?: ""
+                                    fileName.contains("javadoc") && fileName.endsWith(".jar")
+                                } catch (ex: Exception) {
+                                    false
+                                }
+                            }
                         }
+                        
                         // Only add sourcesJar if publication doesn't already have a sources jar artifact
                         // This prevents duplicate when singleVariant withSourcesJar() is used
                         if (!hasSourcesJar && project.tasks.findByName("sourcesJar") != null) {
@@ -124,6 +173,7 @@ class MavenCentralPlugin : Plugin<Project> {
                                 existingPublication.artifact(tasks["javadocJar"])
                             } catch (e: Exception) {
                                 // Ignore exception if already added
+                                project.logger.debug("Failed to add javadocJar to existing publication: ${e.message}")
                             }
                         }
                         extensionInput.pom.orNull?.let {
@@ -216,31 +266,70 @@ class MavenCentralPlugin : Plugin<Project> {
 
         // Disable Dokka V1 tasks if they exist (we're using V2 mode)
         // With V2 mode enabled via system property, Dokka plugin will create V2 tasks automatically
+        // IMPORTANT: Disable dokkaJavadoc BEFORE registering javadocJar to avoid dependency issues
         project.afterEvaluate {
+            // Disable all dokkaJavadoc tasks (V1 tasks are disabled in V2 mode)
             project.tasks.matching { it.name == "dokkaJavadoc" }.configureEach {
-                // Only disable if it's a V1 task (check by class name to avoid using deprecated API)
-                val taskClassName = javaClass.name
-                if (taskClassName.contains("AbstractDokkaLeafTask") ||
-                    taskClassName.contains("DokkaTask")
-                ) {
-                    enabled = false
+                enabled = false
+            }
+            
+            // Remove existing javadocJar task if it depends on dokkaJavadoc
+            val existingJavadocJar = project.tasks.findByName("javadocJar")
+            if (existingJavadocJar != null) {
+                // Check if it depends on dokkaJavadoc and remove that dependency
+                val dokkaJavadocTask = project.tasks.findByName("dokkaJavadoc")
+                if (dokkaJavadocTask != null && existingJavadocJar.dependsOn.contains(dokkaJavadocTask)) {
+                    existingJavadocJar.dependsOn.remove(dokkaJavadocTask)
                 }
             }
-        }
-
-        // Register Javadoc JAR task
-        // In Dokka V2 mode, the Dokka plugin automatically creates the dokkaJavadoc task
-        // We reference it using tasks.named to avoid using deprecated V1 API (DokkaTask)
-        project.afterEvaluate {
-            project.tasks.register("javadocJar", Jar::class.java) {
-                archiveClassifier.set("javadoc")
-                try {
-                    val dokkaJavadocTask = project.tasks.named("dokkaJavadoc")
-                    from(dokkaJavadocTask)
-                    dependsOn(dokkaJavadocTask)
-                } catch (e: Exception) {
-                    // If dokkaJavadoc task doesn't exist, log a warning but don't fail
-                    project.logger.warn("dokkaJavadoc task not found, javadocJar will be created without Dokka output: ${e.message}")
+            
+            // Register or reconfigure Javadoc JAR task
+            val javadocJarTask = if (existingJavadocJar != null) {
+                existingJavadocJar as? Jar
+            } else {
+                project.tasks.register("javadocJar", Jar::class.java) {
+                    archiveClassifier.set("javadoc")
+                }.get()
+            }
+            
+            if (javadocJarTask != null) {
+                javadocJarTask.archiveClassifier.set("javadoc")
+                
+                var taskFound = false
+                
+                // For Kotlin JVM projects, use standard javadoc task (most reliable)
+                if (!isAndroid && (isKotlin || isJava)) {
+                    try {
+                        val javadocTask = project.tasks.named("javadoc", org.gradle.api.tasks.javadoc.Javadoc::class.java)
+                        // Use the output directory of javadoc task
+                        javadocJarTask.from(javadocTask.get().destinationDir)
+                        javadocJarTask.dependsOn(javadocTask)
+                        taskFound = true
+                    } catch (e: Exception) {
+                        // Try Dokka V2 Javadoc task (dokkaGeneratePublicationJavadoc)
+                        try {
+                            val dokkaV2Task = project.tasks.named("dokkaGeneratePublicationJavadoc")
+                            javadocJarTask.from(dokkaV2Task)
+                            javadocJarTask.dependsOn(dokkaV2Task)
+                            taskFound = true
+                        } catch (e2: Exception) {
+                            project.logger.warn("Neither javadoc nor dokkaGeneratePublicationJavadoc task found: ${e2.message}")
+                        }
+                    }
+                } else {
+                    // For Android projects, try Dokka V2 task first
+                    try {
+                        val dokkaV2Task = project.tasks.named("dokkaGeneratePublicationJavadoc")
+                        javadocJarTask.from(dokkaV2Task)
+                        javadocJarTask.dependsOn(dokkaV2Task)
+                        taskFound = true
+                    } catch (e: Exception) {
+                        project.logger.warn("dokkaGeneratePublicationJavadoc task not found for Android project: ${e.message}")
+                    }
+                }
+                
+                if (!taskFound) {
+                    project.logger.warn("javadocJar will be empty. For Kotlin JVM projects, ensure javadoc task exists. For Android projects, apply dokka-javadoc plugin.")
                 }
             }
         }
